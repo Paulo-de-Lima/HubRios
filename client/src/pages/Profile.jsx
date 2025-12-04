@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import Header from '../components/Header'
 import api from '../utils/axios'
 
@@ -60,21 +60,36 @@ const Profile = ({ user }) => {
             <div className="w-24 h-24 rounded-full bg-gradient-to-r from-primary-orange to-primary-purple flex items-center justify-center text-white font-bold text-3xl">
               {profileUser.name?.charAt(0).toUpperCase()}
             </div>
+
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-800">{profileUser.name}</h1>
+
               {profileUser.course && (
                 <p className="text-lg text-primary-blue mt-1">{profileUser.course}</p>
               )}
+
               {profileUser.registration && (
                 <p className="text-sm text-gray-600 mt-1">Matrícula: {profileUser.registration}</p>
               )}
+
               <p className="text-sm text-gray-500 mt-2">{profileUser.email}</p>
+
+              {/* BOTÃO CORRETO */}
+              {user?.id === profileUser.id && (
+                <Link
+                  to={`/profile/${profileUser.id}/edit`}
+                  className="inline-block mt-3 text-primary-purple font-semibold hover:underline"
+                >
+                  Editar Perfil
+                </Link>
+              )}
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Posts</h2>
+
           {posts.length === 0 ? (
             <p className="text-gray-600 text-center py-8">
               Este usuário ainda não publicou nada.
@@ -98,4 +113,3 @@ const Profile = ({ user }) => {
 }
 
 export default Profile
-
