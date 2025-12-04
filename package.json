@@ -9,12 +9,18 @@
     "dev:server": "cd server && npm run dev",
     "install:all": "npm install && cd client && npm install && cd ../server && npm install"
   },
-  "keywords": ["social-network", "university", "react", "mysql"],
+  "keywords": [
+    "social-network",
+    "university",
+    "react",
+    "mysql"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "multer": "^2.0.2"
   }
 }
-
-

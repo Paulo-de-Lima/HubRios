@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import api from '../utils/axios'
 
 const Post = ({ post, currentUser, onUpdate }) => {
@@ -22,9 +23,7 @@ const Post = ({ post, currentUser, onUpdate }) => {
     if (!comment.trim()) return
 
     try {
-      await api.post(`/posts/${post.id}/comments`, {
-        content: comment
-      })
+      await api.post(`/posts/${post.id}/comments`, { content: comment })
       setComment('')
       if (onUpdate) onUpdate()
     } catch (error) {
@@ -32,20 +31,59 @@ const Post = ({ post, currentUser, onUpdate }) => {
     }
   }
 
+  const handleDelete = async () => {
+    console.log("Tentando apagar post:", post.id)
+
+    if (!confirm('Tem certeza que deseja excluir este post?')) return
+
+    try {
+      const r = await api.delete(`/posts/${post.id}`)
+      console.log("DELETE OK:", r.data)
+      if (onUpdate) onUpdate()
+    } catch (error) {
+      console.error("ERRO AO EXCLUIR →", error.response?.data || error)
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-md p-6 mb-4">
       <div className="flex items-start space-x-4 mb-4">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-orange to-primary-purple flex items-center justify-center text-white font-semibold text-lg">
-          {post.user_name?.charAt(0).toUpperCase()}
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center space-x-2">
-            <h3 className="font-semibold text-gray-800">{post.user_name}</h3>
-            <span className="text-sm text-gray-500">•</span>
-            <span className="text-sm text-gray-500">
-              {new Date(post.created_at).toLocaleDateString('pt-BR')}
-            </span>
+
+        {/* 🔥 AVATAR CLICÁVEL */}
+        <Link to={`/profile/${post.user_id}`}>
+          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary-orange to-primary-purple flex items-center justify-center text-white font-semibold text-lg cursor-pointer hover:opacity-90 transition">
+            {post.user_name?.charAt(0).toUpperCase()}
           </div>
+        </Link>
+
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+
+              {/* 🔥 Nome do usuário (se quiser também posso deixar clicável) */}
+              <Link to={`/profile/${post.user_id}`}>
+                <h3 className="font-semibold text-gray-800 hover:text-primary-purple transition cursor-pointer">
+                  {post.user_name}
+                </h3>
+              </Link>
+
+              <span className="text-sm text-gray-500">•</span>
+              <span className="text-sm text-gray-500">
+                {new Date(post.created_at).toLocaleDateString('pt-BR')}
+              </span>
+            </div>
+
+            {/* 🔥 Só mostra excluir para o dono */}
+            {currentUser?.id === post.user_id && (
+              <button
+                onClick={handleDelete}
+                className="text-red-500 hover:text-red-700 text-sm transition-colors"
+              >
+                🗑️ Excluir
+              </button>
+            )}
+          </div>
+
           {post.user_course && (
             <p className="text-sm text-primary-blue">{post.user_course}</p>
           )}
@@ -100,4 +138,3 @@ const Post = ({ post, currentUser, onUpdate }) => {
 }
 
 export default Post
-

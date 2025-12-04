@@ -4,7 +4,9 @@ import pool from '../config/database.js'
 
 const router = express.Router()
 
-// Obter todos os posts
+// =======================================
+// GET - Obter todos os posts
+// =======================================
 router.get('/', optionalAuth, async (req, res) => {
   try {
     const userId = req.user?.id || req.query.userId || null
@@ -14,18 +16,15 @@ router.get('/', optionalAuth, async (req, res) => {
         p.*,
         u.name as user_name,
         u.course as user_course,
+        u.profile_image as user_profile_image,
         COUNT(DISTINCT l.id) as likes_count,
         COUNT(DISTINCT c.id) as comments_count
     `
     
     if (userId) {
-      query += `,
-        EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = ?) as liked
-      `
+      query += `, EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = ?) as liked `
     } else {
-      query += `,
-        0 as liked
-      `
+      query += `, 0 as liked `
     }
     
     query += `
@@ -51,25 +50,46 @@ router.get('/', optionalAuth, async (req, res) => {
   }
 })
 
-// Criar post
+// =======================================
+// POST - Criar post (AGORA COM FOTO DE PERFIL COMO CAPA)
+// =======================================
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { content } = req.body
+    const userId = req.user.id
 
     if (!content || !content.trim()) {
       return res.status(400).json({ message: 'Conteúdo do post é obrigatório' })
     }
 
-    const [result] = await pool.execute(
-      'INSERT INTO posts (user_id, content) VALUES (?, ?)',
-      [req.user.id, content.trim()]
+    // 1 - Buscar dados do usuário (INCLUINDO FOTO DE PERFIL)
+    const [users] = await pool.execute(
+      "SELECT id, name, course, profile_image FROM users WHERE id = ? LIMIT 1",
+      [userId]
     )
 
+    if (users.length === 0) {
+      return res.status(404).json({ message: "Usuário não encontrado" })
+    }
+
+    const user = users[0]
+
+    // Foto de perfil vira CAPA
+    const coverImage = user.profile_image || null
+
+    // 2 - Criar o post
+    const [result] = await pool.execute(
+      'INSERT INTO posts (user_id, content, cover_image) VALUES (?, ?, ?)',
+      [userId, content.trim(), coverImage]
+    )
+
+    // 3 - Retornar o post completo já formatado
     const [posts] = await pool.execute(`
       SELECT 
         p.*,
         u.name as user_name,
         u.course as user_course,
+        u.profile_image as user_profile_image,
         0 as likes_count,
         0 as comments_count,
         0 as liked
@@ -85,39 +105,36 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 })
 
-// Curtir/descurtir post
+// =======================================
+// POST - Curtir/Descurtir post
+// =======================================
 router.post('/:id/like', authenticateToken, async (req, res) => {
   try {
     const postId = req.params.id
     const userId = req.user.id
 
-    // Verificar se já curtiu
     const [existingLikes] = await pool.execute(
       'SELECT id FROM likes WHERE post_id = ? AND user_id = ?',
       [postId, userId]
     )
 
     if (existingLikes.length > 0) {
-      // Remover curtida
       await pool.execute(
         'DELETE FROM likes WHERE post_id = ? AND user_id = ?',
         [postId, userId]
       )
     } else {
-      // Adicionar curtida
       await pool.execute(
         'INSERT INTO likes (post_id, user_id) VALUES (?, ?)',
         [postId, userId]
       )
     }
 
-    // Contar curtidas
     const [likes] = await pool.execute(
       'SELECT COUNT(*) as count FROM likes WHERE post_id = ?',
       [postId]
     )
 
-    // Verificar se usuário curtiu
     const [userLike] = await pool.execute(
       'SELECT id FROM likes WHERE post_id = ? AND user_id = ?',
       [postId, userId]
@@ -133,7 +150,9 @@ router.post('/:id/like', authenticateToken, async (req, res) => {
   }
 })
 
-// Comentar post
+// =======================================
+// POST - Comentar post
+// =======================================
 router.post('/:id/comments', authenticateToken, async (req, res) => {
   try {
     const postId = req.params.id
@@ -155,7 +174,9 @@ router.post('/:id/comments', authenticateToken, async (req, res) => {
   }
 })
 
-// Obter posts de um usuário
+// =======================================
+// GET - Obter posts de um usuário
+// =======================================
 router.get('/user/:userId', async (req, res) => {
   try {
     const userId = req.params.userId
@@ -165,6 +186,7 @@ router.get('/user/:userId', async (req, res) => {
         p.*,
         u.name as user_name,
         u.course as user_course,
+        u.profile_image as user_profile_image,
         COUNT(DISTINCT l.id) as likes_count,
         COUNT(DISTINCT c.id) as comments_count
       FROM posts p
@@ -183,5 +205,36 @@ router.get('/user/:userId', async (req, res) => {
   }
 })
 
-export default router
+// =======================================
+// DELETE - Excluir post
+// =======================================
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    const postId = req.params.id
+    const userId = req.user.id
 
+    const [posts] = await pool.execute(
+      'SELECT * FROM posts WHERE id = ?',
+      [postId]
+    )
+
+    if (posts.length === 0) {
+      return res.status(404).json({ message: 'Post não encontrado' })
+    }
+
+    if (posts[0].user_id !== userId) {
+      return res.status(403).json({ message: 'Você não pode excluir este post' })
+    }
+
+    await pool.execute('DELETE FROM likes WHERE post_id = ?', [postId])
+    await pool.execute('DELETE FROM comments WHERE post_id = ?', [postId])
+    await pool.execute('DELETE FROM posts WHERE id = ?', [postId])
+
+    res.json({ success: true, message: 'Post excluído com sucesso' })
+  } catch (error) {
+    console.error('Erro ao excluir post:', error)
+    res.status(500).json({ message: 'Erro ao excluir post' })
+  }
+})
+
+export default router

@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import Header from '../components/Header'
+
+import Sidebar from '../components/Sidebar'
 import api from '../utils/axios'
 
 const Profile = ({ user }) => {
   const { id } = useParams()
   const [profileUser, setProfileUser] = useState(null)
   const [posts, setPosts] = useState([])
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchProfile()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const fetchProfile = async () => {
@@ -23,89 +24,136 @@ const Profile = ({ user }) => {
       setPosts(postsResponse.data)
     } catch (error) {
       console.error('Erro ao carregar perfil:', error)
-    } finally {
-      setLoading(false)
+      setProfileUser(null)
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header user={user} onLogout={() => {}} />
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-purple"></div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!profileUser) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Header user={user} onLogout={() => {}} />
-        <div className="text-center py-12">
-          <p className="text-gray-600">Usuário não encontrado</p>
-        </div>
-      </div>
-    )
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header user={user} onLogout={() => {}} />
-      
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-xl shadow-md p-8 mb-6">
-          <div className="flex items-center space-x-6">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-r from-primary-orange to-primary-purple flex items-center justify-center text-white font-bold text-3xl">
-              {profileUser.name?.charAt(0).toUpperCase()}
-            </div>
 
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-800">{profileUser.name}</h1>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex gap-8">
 
-              {profileUser.course && (
-                <p className="text-lg text-primary-blue mt-1">{profileUser.course}</p>
-              )}
+          {/* Sidebar */}
+          <Sidebar user={user} />
 
-              {profileUser.registration && (
-                <p className="text-sm text-gray-600 mt-1">Matrícula: {profileUser.registration}</p>
-              )}
+          {/* Conteúdo principal */}
+          <div className="flex-1">
 
-              <p className="text-sm text-gray-500 mt-2">{profileUser.email}</p>
+            {/* Usuário não encontrado */}
+            {!profileUser && (
+              <div className="text-center py-12">
+                <p className="text-gray-600">Usuário não encontrado</p>
+              </div>
+            )}
 
-              {/* BOTÃO CORRETO */}
-              {user?.id === profileUser.id && (
-                <Link
-                  to={`/profile/${profileUser.id}/edit`}
-                  className="inline-block mt-3 text-primary-purple font-semibold hover:underline"
-                >
-                  Editar Perfil
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
+            {/* Só renderiza se o usuário existir */}
+            {profileUser && (
+              <>
+                {/* Card do Perfil */}
+                <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+                  <div className="flex items-start space-x-6">
 
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Posts</h2>
+                    {/* Avatar */}
+                    <div className="w-28 h-28 rounded-full bg-gradient-to-r from-primary-orange to-primary-purple flex items-center justify-center text-white font-bold text-4xl">
+                      {profileUser.name?.charAt(0).toUpperCase()}
+                    </div>
 
-          {posts.length === 0 ? (
-            <p className="text-gray-600 text-center py-8">
-              Este usuário ainda não publicou nada.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {posts.map(post => (
-                <div key={post.id} className="border-b border-gray-200 pb-4 last:border-0">
-                  <p className="text-gray-700 whitespace-pre-wrap">{post.content}</p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    {new Date(post.created_at).toLocaleDateString('pt-BR')}
-                  </p>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+                            {profileUser.name}
+                          </h1>
+
+                          {profileUser.course && (
+                            <p className="text-sm text-primary-blue mt-1">
+                              {profileUser.course}
+                            </p>
+                          )}
+
+                          <p className="text-sm text-gray-500 mt-2">{profileUser.email}</p>
+                        </div>
+
+                        {/* Editar perfil */}
+                        {user?.id === profileUser.id && (
+                          <Link
+                            to={`/profile/${profileUser.id}/edit`}
+                            className="inline-block text-primary-purple font-semibold hover:underline"
+                          >
+                            Editar Perfil
+                          </Link>
+                        )}
+                      </div>
+
+                      {/* Bio */}
+                      {profileUser.bio && (
+                        <p className="mt-4 text-gray-700">{profileUser.bio}</p>
+                      )}
+
+                      {/* Infos */}
+                      <div className="mt-3 text-sm text-gray-600 space-y-1">
+                        {profileUser.location && <div>📍 {profileUser.location}</div>}
+                        {profileUser.website && (
+                          <div>
+                            🔗{' '}
+                            <a
+                              href={profileUser.website}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary-purple hover:underline"
+                            >
+                              {profileUser.website}
+                            </a>
+                          </div>
+                        )}
+                        {profileUser.instagram && (
+                          <div>
+                            📸{' '}
+                            <a
+                              href={profileUser.instagram}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary-purple hover:underline"
+                            >
+                              {profileUser.instagram}
+                            </a>
+                          </div>
+                        )}
+                        <div>
+                          🕒 Entrou em:{' '}
+                          {new Date(profileUser.created_at).toLocaleDateString('pt-BR')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
+
+                {/* Posts */}
+                <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Posts</h2>
+
+                  {posts.length === 0 ? (
+                    <p className="text-gray-600 text-center py-8">
+                      Este usuário ainda não publicou nada.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {posts.map(post => (
+                        <div key={post.id} className="border-b border-gray-200 pb-4 last:border-0">
+                          <p className="text-gray-700 whitespace-pre-wrap">{post.content}</p>
+                          <p className="text-sm text-gray-500 mt-2">
+                            {new Date(post.created_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+          </div>
         </div>
       </div>
     </div>
