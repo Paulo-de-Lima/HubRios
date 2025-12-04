@@ -66,6 +66,8 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body
 
+    console.log('Tentativa de login:', { email, passwordProvided: !!password })
+
     if (!email || !password) {
       return res.status(400).json({ message: 'Email e senha são obrigatórios' })
     }
@@ -76,16 +78,22 @@ router.post('/login', async (req, res) => {
       [email]
     )
 
+    console.log('Usuários encontrados:', users.length)
+
     if (users.length === 0) {
+      console.log('Usuário não encontrado para email:', email)
       return res.status(401).json({ message: 'Credenciais inválidas' })
     }
 
     const user = users[0]
+    console.log('Usuário encontrado:', { id: user.id, name: user.name, email: user.email })
 
     // Verificar senha
     const validPassword = await bcrypt.compare(password, user.password)
+    console.log('Senha válida:', validPassword)
 
     if (!validPassword) {
+      console.log('Senha inválida para usuário:', email)
       return res.status(401).json({ message: 'Credenciais inválidas' })
     }
 
@@ -95,6 +103,8 @@ router.post('/login', async (req, res) => {
       process.env.JWT_SECRET || 'seu-secret-super-seguro',
       { expiresIn: '7d' }
     )
+
+    console.log('Login bem-sucedido para:', email)
 
     res.json({
       message: 'Login realizado com sucesso',
@@ -109,7 +119,16 @@ router.post('/login', async (req, res) => {
     })
   } catch (error) {
     console.error('Erro no login:', error)
-    res.status(500).json({ message: 'Erro ao fazer login' })
+    console.error('Detalhes do erro:', {
+      message: error.message,
+      code: error.code,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage
+    })
+    res.status(500).json({ 
+      message: 'Erro ao fazer login',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
   }
 })
 
